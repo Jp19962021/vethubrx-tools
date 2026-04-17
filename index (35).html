@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>VetHubRx — Clinic Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#080c14;--s1:#0d1220;--s2:#121a2e;--s3:#1a2540;
+  --b1:#1e2d45;--b2:#243554;
+  --teal:#00d4b4;--teal2:#009e88;
+  --sky:#38c8ff;--amber:#ffb347;--red:#ff5252;--green:#3ddc84;--purple:#a78bfa;
+  --t1:#e2eaf5;--t2:#8899b8;--t3:#4a607a;
+  --head:'Syne',sans-serif;--body:'Inter',sans-serif;--mono:'DM Mono',monospace;
+  --r:8px;--r2:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--body);font-size:14px;overflow:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+a{color:inherit;text-decoration:none}
+
+/* LAYOUT */
+#app{display:flex;height:100vh}
+#sidebar{width:240px;min-width:240px;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;z-index:20}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:54px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 22px;gap:12px;flex-shrink:0}
+#content{flex:1;overflow-y:auto;padding:26px}
+
+/* SIDEBAR */
+.sb-brand{padding:18px 18px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:10px}
+.sb-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--teal),var(--sky));border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--head);font-size:13px;font-weight:800;color:#080c14;flex-shrink:0}
+.sb-name{font-family:var(--head);font-size:14px;font-weight:800}
+.sb-sub{font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:.8px}
+
+.sb-section{padding:14px 16px 6px;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.8px}
+.sb-nav{margin:1px 8px;padding:8px 10px;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:9px;color:var(--t2);font-size:13px;font-weight:500;transition:.15s;border:1px solid transparent}
+.sb-nav:hover{background:var(--s2);color:var(--t1)}
+.sb-nav.on{background:linear-gradient(90deg,rgba(0,212,180,.12),rgba(56,200,255,.06));color:var(--teal);border-color:rgba(0,212,180,.2)}
+.sb-nav .ico{width:18px;text-align:center;font-size:15px}
+
+/* funnel counts in sidebar */
+.sb-funnel{padding:10px 16px}
+.sf-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);cursor:pointer;transition:.15s;margin-bottom:2px}
+.sf-item:hover,.sf-item.on{background:var(--s2)}
+.sf-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sf-label{font-size:12px;font-weight:500;color:var(--t2);flex:1}
+.sf-item.on .sf-label{color:var(--t1)}
+.sf-count{font-family:var(--mono);font-size:12px}
+.sf-bar-wrap{height:3px;background:var(--b1);border-radius:2px;margin:2px 0 6px 15px;overflow:hidden}
+.sf-bar{height:100%;border-radius:2px;transition:width .6s ease}
+
+.sb-bottom{margin-top:auto;border-top:1px solid var(--b1);padding:12px 14px}
+.sync-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;transition:.15s}
+.sync-row:hover{border-color:var(--teal)}
+.sync-pulse{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sync-pulse.spin{background:var(--amber);animation:blink .8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.sync-txt{font-size:12px;font-weight:600;color:var(--t2);flex:1}
+.last-sync{font-size:10px;color:var(--t3);text-align:center;margin-top:6px}
+
+/* TOPBAR */
+.tb-title{font-family:var(--head);font-size:17px;font-weight:800}
+.tb-sub{font-size:12px;color:var(--t2)}
+.tb-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.inp{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:6px 12px;color:var(--t1);font-size:13px;font-family:var(--body);outline:none;transition:.15s}
+.inp:focus{border-color:var(--teal)}
+.inp::placeholder{color:var(--t3)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:var(--body)}
+.btn-primary{background:var(--teal);color:#080c14}
+.btn-primary:hover{background:var(--teal2)}
+.btn-ghost{background:transparent;color:var(--t2);border:1px solid var(--b1)}
+.btn-ghost:hover{background:var(--s2);color:var(--t1)}
+
+/* STAT CARDS */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px;margin-bottom:22px}
+.sc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r2);padding:15px 17px;position:relative;overflow:hidden;cursor:pointer;transition:.15s}
+.sc:hover{border-color:var(--b2)}
+.sc.on{border-color:var(--teal)}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sc.all::after{background:linear-gradient(90deg,var(--teal),var(--sky))}
+.sc.s0::after{background:var(--sky)}
+.sc.s1::after{background:var(--amber)}
+.sc.s2::after{background:var(--green)}
+.sc.stuck::after{background:var(--red)}
+.sc-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.sc-val{font-family:var(--mono);font-size:26px;line-height:1;color:var(--t1)}
+.sc-sub{font-size:11px;color:var(--t3);margin-top:4px}
+.sc-icon{position:absolute;right:14px;top:14px;font-size:18px;opacity:.35}
+
+/* RX SUMMARY STRIP */
+.rx-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:11px;margin-bottom:22px}
+.rx-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r2);padding:15px 17px}
+.rx-card-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.rx-compare{display:flex;align-items:flex-end;gap:10px}
+.rx-this{font-family:var(--mono);font-size:28px;font-weight:500;color:var(--teal);line-height:1}
+.rx-last{font-family:var(--mono);font-size:16px;color:var(--t3);padding-bottom:2px}
+.rx-arrow{font-size:12px;font-weight:700;padding:2px 7px;border-radius:20px;margin-bottom:3px}
+.rx-up{background:rgba(61,220,132,.12);color:var(--green)}
+.rx-dn{background:rgba(255,82,82,.12);color:var(--red)}
+.rx-flat{background:rgba(74,96,122,.15);color:var(--t2)}
+
+/* TABLE */
+.tbl-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r2);overflow:hidden}
+.tbl-top{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--b1)}
+.tbl-heading{font-family:var(--head);font-size:14px;font-weight:700}
+.tbl-ct{font-size:12px;color:var(--t3)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--s2);padding:9px 15px;text-align:left;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--b1);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--t2)}
+tbody tr{border-bottom:1px solid var(--b1);cursor:pointer;transition:.1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+td{padding:10px 15px;vertical-align:middle}
+.td-name{font-weight:600}
+.td-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.td-mono{font-family:var(--mono);font-size:12px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.b-sky{background:rgba(56,200,255,.1);color:var(--sky)}
+.b-amber{background:rgba(255,179,71,.1);color:var(--amber)}
+.b-green{background:rgba(61,220,132,.1);color:var(--green)}
+.b-red{background:rgba(255,82,82,.1);color:var(--red)}
+.b-gray{background:rgba(74,96,122,.12);color:var(--t2)}
+
+/* PROGRESS DOTS */
+.pdots{display:flex;align-items:center;gap:0}
+.pd{width:9px;height:9px;border-radius:50%;border:2px solid var(--b2);transition:.2s}
+.pd.done{background:var(--teal);border-color:var(--teal)}
+.pd.now{background:var(--amber);border-color:var(--amber)}
+.pl{width:16px;height:2px;background:var(--b2)}
+.pl.done{background:var(--teal)}
+
+/* DETAIL PANEL */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:none;opacity:0;transition:opacity .2s}
+#overlay.on{display:block;opacity:1}
+#panel{position:fixed;right:0;top:0;height:100vh;width:500px;background:var(--s1);border-left:1px solid var(--b1);z-index:101;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+#panel.on{transform:translateX(0)}
+.ph{padding:18px 20px 14px;border-bottom:1px solid var(--b1);flex-shrink:0}
+.ph-top{display:flex;align-items:flex-start}
+.ph-name{font-family:var(--head);font-size:16px;font-weight:800}
+.ph-sub{font-size:12px;color:var(--t2);margin-top:3px}
+.ph-close{margin-left:auto;background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer;border-radius:6px;padding:2px 6px;transition:.15s}
+.ph-close:hover{background:var(--s2);color:var(--t1)}
+.p-tabs{display:flex;gap:2px;background:var(--s2);border-radius:var(--r);padding:3px;margin:12px 20px 0}
+.pt{flex:1;text-align:center;padding:6px;font-size:12px;font-weight:600;color:var(--t2);border-radius:6px;cursor:pointer;transition:.15s}
+.pt.on{background:var(--s3);color:var(--t1)}
+.pb{flex:1;overflow-y:auto;padding:18px 20px}
+
+/* PANEL STATS */
+.ps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.ps{background:var(--s2);border-radius:var(--r);padding:10px}
+.ps-l{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.ps-v{font-family:var(--mono);font-size:16px;font-weight:500}
+
+/* RX CHART BAR */
+.bar-wrap{height:100px;display:flex;align-items:flex-end;gap:3px;margin-top:8px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bar-fill{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:.4s}
+.bar-lbl{font-size:9px;color:var(--t3)}
+
+/* TIMELINE */
+.tl{padding-left:18px;position:relative}
+.tl::before{content:'';position:absolute;left:5px;top:8px;bottom:8px;width:2px;background:var(--b2)}
+.tl-row{position:relative;margin-bottom:14px}
+.tl-dot{position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg)}
+.tl-dot.done{background:var(--teal);box-shadow:0 0 6px rgba(0,212,180,.4)}
+.tl-dot.wait{background:var(--b2)}
+.tl-title{font-size:13px;font-weight:600}
+.tl-meta{font-size:11px;color:var(--t3);margin-top:2px}
+
+/* AI PANEL */
+#ai-fab{position:fixed;bottom:22px;right:22px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--purple));border:none;cursor:pointer;font-size:20px;z-index:300;box-shadow:0 4px 20px rgba(0,212,180,.35);transition:.2s;display:flex;align-items:center;justify-content:center}
+#ai-fab:hover{transform:scale(1.08)}
+#ai-box{position:fixed;bottom:0;right:0;width:400px;height:500px;background:var(--s1);border:1px solid var(--b1);border-radius:14px 14px 0 0;z-index:299;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 -6px 30px rgba(0,0,0,.4)}
+#ai-box.on{transform:translateY(0)}
+.ai-hdr{padding:12px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:9px;cursor:pointer;flex-shrink:0}
+.ai-orb{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--purple));display:flex;align-items:center;justify-content:center;font-size:13px;animation:glow 3s ease-in-out infinite;flex-shrink:0}
+@keyframes glow{0%,100%{box-shadow:0 0 6px rgba(0,212,180,.3)}50%{box-shadow:0 0 16px rgba(167,139,250,.5)}}
+.ai-hdr-txt{font-family:var(--head);font-size:13px;font-weight:700;flex:1}
+.ai-hdr-sub{font-size:10px;color:var(--teal)}
+.ai-x{background:none;border:none;color:var(--t2);font-size:18px;cursor:pointer;border-radius:6px;padding:2px 5px}
+.ai-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+.ai-msg{max-width:86%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5}
+.ai-msg.u{background:var(--teal);color:#080c14;align-self:flex-end;border-bottom-right-radius:4px;font-weight:500}
+.ai-msg.a{background:var(--s2);border:1px solid var(--b1);color:var(--t1);align-self:flex-start;border-bottom-left-radius:4px}
+.ai-msg.typing{color:var(--t3);font-style:italic}
+.ai-sugs{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 8px}
+.ai-sug{background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--t2);cursor:pointer;transition:.15s;font-family:var(--body)}
+.ai-sug:hover{border-color:var(--teal);color:var(--teal)}
+.ai-inp-row{display:flex;gap:7px;padding:10px 12px;border-top:1px solid var(--b1);flex-shrink:0}
+.ai-inp{flex:1;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:7px 11px;color:var(--t1);font-size:13px;font-family:var(--body);outline:none;transition:.15s}
+.ai-inp:focus{border-color:var(--teal)}
+.ai-send{background:var(--teal);border:none;border-radius:var(--r);padding:7px 13px;color:#080c14;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--body)}
+
+/* MISC */
+.empty{text-align:center;padding:50px 20px;color:var(--t3)}
+.empty .e-ico{font-size:34px;margin-bottom:10px;opacity:.4}
+.kv{display:flex;gap:8px;font-size:13px;margin-bottom:7px}
+.kv .k{color:var(--t3);width:120px;flex-shrink:0;font-size:12px}
+.kv .v{color:var(--t1);font-weight:500}
+.divider{height:1px;background:var(--b1);margin:14px 0}
+.section-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+@media(max-width:800px){#sidebar{display:none}#panel{width:100vw}#ai-box{width:100vw}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-mark">Vx</div>
+      <div><div class="sb-name">VetHubRx</div><div class="sb-sub">Pipeline</div></div>
+    </div>
+
+    <div class="sb-section">Pipeline Stages</div>
+    <div class="sb-funnel">
+      <div class="sf-item on" id="sf-all" onclick="setStage('all')">
+        <div class="sf-dot" style="background:var(--teal)"></div>
+        <div class="sf-label">All Clinics</div>
+        <div class="sf-count text-teal" id="sfc-all" style="color:var(--teal)">—</div>
+      </div>
+      <div class="sf-bar-wrap"><div class="sf-bar" id="sfb-all" style="width:100%;background:var(--teal)"></div></div>
+
+      <div class="sf-item" id="sf-s0" onclick="setStage('s0')">
+        <div class="sf-dot" style="background:var(--sky)"></div>
+        <div class="sf-label">Signed Up Only</div>
+        <div class="sf-count" id="sfc-s0" style="color:var(--sky)">—</div>
+      </div>
+      <div class="sf-bar-wrap"><div class="sf-bar" id="sfb-s0" style="background:var(--sky)"></div></div>
+
+      <div class="sf-item" id="sf-s1" onclick="setStage('s1')">
+        <div class="sf-dot" style="background:var(--amber)"></div>
+        <div class="sf-label">Staff Added</div>
+        <div class="sf-count" id="sfc-s1" style="color:var(--amber)">—</div>
+      </div>
+      <div class="sf-bar-wrap"><div class="sf-bar" id="sfb-s1" style="background:var(--amber)"></div></div>
+
+      <div class="sf-item" id="sf-s2" onclick="setStage('s2')">
+        <div class="sf-dot" style="background:var(--green)"></div>
+        <div class="sf-label">First Rx Sent</div>
+        <div class="sf-count" id="sfc-s2" style="color:var(--green)">—</div>
+      </div>
+      <div class="sf-bar-wrap"><div class="sf-bar" id="sfb-s2" style="background:var(--green)"></div></div>
+
+      <div class="sf-item" id="sf-stuck" onclick="setStage('stuck')">
+        <div class="sf-dot" style="background:var(--red)"></div>
+        <div class="sf-label">Stuck &gt;7 days</div>
+        <div class="sf-count" id="sfc-stuck" style="color:var(--red)">—</div>
+      </div>
+      <div class="sf-bar-wrap"><div class="sf-bar" id="sfb-stuck" style="background:var(--red)"></div></div>
+    </div>
+
+    <div class="sb-bottom">
+      <div class="sync-row" onclick="loadData()">
+        <div class="sync-pulse" id="sync-dot"></div>
+        <span class="sync-txt" id="sync-txt">Sync Data</span>
+        <span style="font-size:13px;color:var(--t3)">↻</span>
+      </div>
+      <div class="last-sync" id="last-sync">Not synced</div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div>
+        <div class="tb-title" id="tb-title">Clinic Pipeline</div>
+        <div class="tb-sub" id="tb-sub">Loading…</div>
+      </div>
+      <div class="tb-right">
+        <input class="inp" id="search" placeholder="🔍  Search clinics…" oninput="applyFilters()" style="width:200px"/>
+        <select class="inp" id="sort-sel" onchange="applyFilters()">
+          <option value="signup_desc">Newest First</option>
+          <option value="signup_asc">Oldest First</option>
+          <option value="name">Name A→Z</option>
+          <option value="rx_desc">Most Rx</option>
+          <option value="stuck">Stuck Longest</option>
+        </select>
+        <button class="btn btn-ghost" onclick="exportCSV()">⬇ CSV</button>
+      </div>
+    </div>
+
+    <div id="content">
+      <!-- FUNNEL STAT CARDS -->
+      <div class="stat-grid" id="stat-grid">
+        <div class="sc all on" onclick="setStage('all')"><div class="sc-icon">🏥</div><div class="sc-label">Total Clinics</div><div class="sc-val" id="sv-all">—</div><div class="sc-sub" id="ss-all">all time</div></div>
+        <div class="sc s0" onclick="setStage('s0')"><div class="sc-icon">✍️</div><div class="sc-label">Signed Up Only</div><div class="sc-val" id="sv-s0">—</div><div class="sc-sub">no staff yet</div></div>
+        <div class="sc s1" onclick="setStage('s1')"><div class="sc-icon">👥</div><div class="sc-label">Staff Added</div><div class="sc-val" id="sv-s1">—</div><div class="sc-sub">not prescribed yet</div></div>
+        <div class="sc s2" onclick="setStage('s2')"><div class="sc-icon">💊</div><div class="sc-label">Prescribing</div><div class="sc-val" id="sv-s2">—</div><div class="sc-sub">sent ≥1 Rx</div></div>
+        <div class="sc stuck" onclick="setStage('stuck')"><div class="sc-icon">⏳</div><div class="sc-label">Stuck &gt;7d</div><div class="sc-val" id="sv-stuck">—</div><div class="sc-sub">need follow-up</div></div>
+      </div>
+
+      <!-- RX VOLUME STRIP -->
+      <div class="rx-strip">
+        <div class="rx-card">
+          <div class="rx-card-label">Company Rx — This Month vs Last</div>
+          <div class="rx-compare">
+            <div class="rx-this" id="rx-this-co">—</div>
+            <div class="rx-last" id="rx-last-co">—</div>
+            <div class="rx-arrow" id="rx-arrow-co"></div>
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-top:4px" id="rx-sub-co">Loading…</div>
+        </div>
+        <div class="rx-card">
+          <div class="rx-card-label">New Clinics This Month</div>
+          <div class="rx-compare">
+            <div class="rx-this" id="rx-new-this" style="color:var(--sky)">—</div>
+            <div class="rx-last" id="rx-new-last">—</div>
+            <div class="rx-arrow" id="rx-new-arrow"></div>
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-top:4px">vs last month signups</div>
+        </div>
+        <div class="rx-card">
+          <div class="rx-card-label">Activation Rate</div>
+          <div class="rx-compare">
+            <div class="rx-this" id="rx-act-rate" style="color:var(--purple)">—</div>
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-top:4px">signed up → first Rx</div>
+        </div>
+      </div>
+
+      <!-- CLINIC TABLE -->
+      <div class="tbl-card">
+        <div class="tbl-top">
+          <div class="tbl-heading">Clinics</div>
+          <div class="tbl-ct" id="tbl-ct">—</div>
+          <div style="margin-left:auto"></div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th onclick="sortBy('name')">Clinic</th>
+              <th>Stage</th>
+              <th>Progress</th>
+              <th onclick="sortBy('signup')">Signed Up</th>
+              <th onclick="sortBy('staff')">Staff Added</th>
+              <th onclick="sortBy('first_rx')">First Rx</th>
+              <th onclick="sortBy('rx_this')">Rx This Mo.</th>
+              <th onclick="sortBy('rx_last')">Rx Last Mo.</th>
+              <th>MoM</th>
+              <th onclick="sortBy('stuck')">Stuck</th>
+            </tr></thead>
+            <tbody id="tbl-body">
+              <tr><td colspan="10"><div class="empty"><div class="e-ico">⏳</div><p>Loading…</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="overlay" onclick="closePanel()"></div>
+<div id="panel">
+  <div class="ph">
+    <div class="ph-top">
+      <div><div class="ph-name" id="ph-name">—</div><div class="ph-sub" id="ph-sub">—</div></div>
+      <button class="ph-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="p-tabs">
+      <div class="pt on" onclick="switchTab('overview',this)">Overview</div>
+      <div class="pt" onclick="switchTab('rx',this)">Rx History</div>
+      <div class="pt" onclick="switchTab('drugs',this)">Drugs & Pharmacies</div>
+      <div class="pt" onclick="switchTab('timeline',this)">Timeline</div>
+    </div>
+  </div>
+  <div class="pb" id="panel-body"></div>
+</div>
+
+<!-- AI -->
+<button id="ai-fab" onclick="toggleAI()">✦</button>
+<div id="ai-box">
+  <div class="ai-hdr" onclick="toggleAI()">
+    <div class="ai-orb">✦</div>
+    <div style="flex:1"><div class="ai-hdr-txt">Pipeline AI</div><div class="ai-hdr-sub">claude-sonnet-4-6</div></div>
+    <button class="ai-x" onclick="event.stopPropagation();toggleAI()">✕</button>
+  </div>
+  <div class="ai-msgs" id="ai-msgs">
+    <div class="ai-msg a">Hey JP 👋 I have full visibility into your clinic pipeline — signups, activation stages, Rx volumes, stuck accounts, everything. Ask me anything.</div>
+  </div>
+  <div class="ai-sugs" id="ai-sugs">
+    <div class="ai-sug" onclick="ask('How many clinics are stuck right now?')">Stuck clinics?</div>
+    <div class="ai-sug" onclick="ask('Which clinics signed up this week but haven\\'t added staff?')">New + no staff?</div>
+    <div class="ai-sug" onclick="ask('What is our Rx volume this month vs last month?')">Rx this vs last month?</div>
+    <div class="ai-sug" onclick="ask('Which clinics sent the most prescriptions this month?')">Top prescribers?</div>
+    <div class="ai-sug" onclick="ask('Give me a follow-up priority list for today.')">Today\\'s priorities</div>
+  </div>
+  <div class="ai-inp-row">
+    <input class="ai-inp" id="ai-inp" placeholder="Ask anything about your pipeline…" onkeydown="if(event.key==='Enter')sendAI()"/>
+    <button class="ai-send" onclick="sendAI()">↑</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONFIG — set WORKER_URL after deploying Worker
+// ═══════════════════════════════════════════════
+const WORKER_URL = ''; // e.g. 'https://vhbrx-pipeline-worker.YOUR.workers.dev'
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let ALL = [], FILTERED = [], ACTIVE_STAGE = 'all', ACTIVE_CLINIC = null, PANEL_TAB = 'overview';
+let AI_OPEN = false, AI_HIST = [];
+let SORT = 'signup_desc';
+
+const NOW = Date.now();
+const DAY = 86400000;
+function startOfMonth(d){ const x=new Date(d); x.setDate(1);x.setHours(0,0,0,0);return x.getTime(); }
+const THIS_MO_START = startOfMonth(NOW);
+const LAST_MO_START = startOfMonth(new Date(new Date().getFullYear(), new Date().getMonth()-1, 1));
+const LAST_MO_END   = THIS_MO_START - 1;
+
+// ═══════════════════════════════════════════════
+//  LOAD DATA
+// ═══════════════════════════════════════════════
+async function loadData(){
+  setSyncing(true);
+  try{
+    if(WORKER_URL){
+      const r = await fetch(WORKER_URL+'/pipeline');
+      const d = await r.json();
+      ALL = d.clinics || [];
+    } else {
+      ALL = demo();
+    }
+  }catch(e){ ALL = demo(); }
+  updateStats();
+  applyFilters();
+  setSyncing(false);
+  document.getElementById('last-sync').textContent = 'Synced '+new Date().toLocaleTimeString();
+}
+
+function setSyncing(v){
+  document.getElementById('sync-dot').classList.toggle('spin',v);
+  document.getElementById('sync-txt').textContent = v ? 'Syncing…' : 'Sync Data';
+}
+
+// ═══════════════════════════════════════════════
+//  DEMO DATA
+// ═══════════════════════════════════════════════
+function demo(){
+  const names=['Sunrise Animal Hospital','Paws & Claws Vet','Blue Ridge Pet Clinic','Lakeside Animal Care',
+    'Greenfield Vet Practice','Harmony Pet Hospital','Westside Animal Clinic','Cedar Grove Vets',
+    'Maplewood Pet Hospital','Riverbend Animal Center','Summit View Vet','Coastal Paws Clinic',
+    'Rolling Hills Animal Hospital','Valley View Vets','Pine Street Pet Care','Oakwood Animal Clinic',
+    'Meadowbrook Vets','Harbor Animal Hospital','Clearwater Pet Clinic','Mountain View Vet Center',
+    'Evergreen Animal Care','Foxwood Veterinary','Stonegate Animal Hospital','Birchwood Pet Clinic',
+    'Lakewood Animal Care','Willow Creek Vets','Elmwood Pet Hospital','Riverside Animal Clinic',
+    'Brookside Vets','Northgate Animal Care'];
+  const drugs=['Amoxicillin','Metronidazole','Carprofen','Meloxicam','Doxycycline','Gabapentin',
+    'Prednisone','Cephalexin','Fluoxetine','Trazodone','Compounded Methimazole','Compounded Phenobarbital'];
+  const pharmacies=['PetScript Pharmacy','Walgreens','CVS','Chewy Pharmacy','VetCove','Mixlab'];
+  const cities=['Austin TX','Miami FL','Columbus OH','Atlanta GA','Charlotte NC','Tampa FL'];
+  const plans=['Free','Starter','Practice','Enterprise'];
+
+  return names.map((name,i)=>{
+    const signupAgo = Math.floor(Math.random()*120)+1;
+    const signupTs = NOW - signupAgo*DAY;
+    const hasStaff = Math.random()>.3;
+    const staffTs = hasStaff ? signupTs + (Math.floor(Math.random()*4)+1)*DAY : null;
+    const hasRx = hasStaff && Math.random()>.35;
+    const firstRxTs = hasRx ? staffTs + (Math.floor(Math.random()*5)+1)*DAY : null;
+
+    // build monthly rx
+    const rxRecords = [];
+    if(hasRx){
+      const total = Math.floor(Math.random()*80)+1;
+      for(let j=0;j<total;j++){
+        const daysAgo = Math.floor(Math.random()*60);
+        rxRecords.push({
+          ts: NOW - daysAgo*DAY,
+          drug: drugs[Math.floor(Math.random()*drugs.length)],
+          pharmacy: pharmacies[Math.floor(Math.random()*pharmacies.length)],
+          count: 1
+        });
+      }
+    }
+
+    const rxThis = rxRecords.filter(r=>r.ts>=THIS_MO_START).length;
+    const rxLast = rxRecords.filter(r=>r.ts>=LAST_MO_START&&r.ts<=LAST_MO_END).length;
+
+    const stage = hasRx?2:hasStaff?1:0;
+    const lastActivityTs = stage===2?firstRxTs:stage===1?staffTs:signupTs;
+    const daysInStage = Math.floor((NOW-lastActivityTs)/DAY);
+    const stuck = stage<2 && daysInStage>7;
+
+    return {id:i+1,name,email:name.replace(/[^a-z]/gi,'').toLowerCase().slice(0,8)+'@vet.com',
+      phone:`(${300+i}) 555-${1000+i}`,city:cities[i%cities.length],plan:plans[i%plans.length],
+      staff_count:hasStaff?Math.floor(Math.random()*8)+1:0,
+      signup_ts:signupTs,staff_ts:staffTs,first_rx_ts:firstRxTs,
+      stage,daysInStage,stuck,rxThis,rxLast,rxRecords,
+      total_rx:rxRecords.length};
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════
+function updateStats(){
+  const n = ALL.length;
+  const s0=ALL.filter(c=>c.stage===0).length;
+  const s1=ALL.filter(c=>c.stage===1).length;
+  const s2=ALL.filter(c=>c.stage===2).length;
+  const stuck=ALL.filter(c=>c.stuck).length;
+
+  ['all','s0','s1','s2','stuck'].forEach(k=>{
+    const v = k==='all'?n:k==='s0'?s0:k==='s1'?s1:k==='s2'?s2:stuck;
+    $('sv-'+k, v);
+    $('sfc-'+k, v);
+    const pct = n?Math.round(v/n*100):0;
+    document.getElementById('sfb-'+k).style.width = (k==='all'?100:pct)+'%';
+  });
+
+  // RX strip
+  const rxThis = ALL.reduce((s,c)=>s+c.rxThis,0);
+  const rxLast = ALL.reduce((s,c)=>s+c.rxLast,0);
+  $('rx-this-co', rxThis);
+  $('rx-last-co', rxLast+' last mo');
+  const mom = rxLast ? Math.round((rxThis-rxLast)/rxLast*100) : 0;
+  const arEl = document.getElementById('rx-arrow-co');
+  arEl.textContent = (mom>=0?'+':'')+mom+'%';
+  arEl.className = 'rx-arrow '+(mom>0?'rx-up':mom<0?'rx-dn':'rx-flat');
+  $('rx-sub-co', rxThis+' Rx sent '+new Date().toLocaleString('default',{month:'long'}));
+
+  // New signups
+  const newThis = ALL.filter(c=>c.signup_ts>=THIS_MO_START).length;
+  const newLast = ALL.filter(c=>c.signup_ts>=LAST_MO_START&&c.signup_ts<=LAST_MO_END).length;
+  $('rx-new-this', newThis);
+  $('rx-new-last', newLast+' last mo');
+  const nmom = newLast?Math.round((newThis-newLast)/newLast*100):0;
+  const naEl=document.getElementById('rx-new-arrow');
+  naEl.textContent=(nmom>=0?'+':'')+nmom+'%';
+  naEl.className='rx-arrow '+(nmom>0?'rx-up':nmom<0?'rx-dn':'rx-flat');
+
+  // Activation rate
+  const activated = ALL.filter(c=>c.stage===2).length;
+  $('rx-act-rate', n?Math.round(activated/n*100)+'%':'—');
+
+  document.getElementById('tb-sub').textContent = n+' clinics · '+s2+' prescribing · '+stuck+' need follow-up';
+  $('ss-all', n+' total');
+}
+
+// ═══════════════════════════════════════════════
+//  FILTER + RENDER TABLE
+// ═══════════════════════════════════════════════
+function setStage(s){
+  ACTIVE_STAGE=s;
+  ['all','s0','s1','s2','stuck'].forEach(k=>{
+    document.getElementById('sf-'+k)?.classList.toggle('on',k===s);
+    document.getElementById('sc-'+k)?.classList.toggle('on',k===s);
+  });
+  document.querySelectorAll('.sc').forEach(el=>el.classList.remove('on'));
+  document.querySelector('.sc.'+s)?.classList.add('on');
+  if(s==='all') document.querySelector('.sc.all')?.classList.add('on');
+  applyFilters();
+}
+
+function sortBy(col){ SORT=col; applyFilters(); }
+
+function applyFilters(){
+  const q = document.getElementById('search').value.toLowerCase();
+  const sort = document.getElementById('sort-sel').value || SORT;
+
+  let list = ALL.filter(c=>{
+    if(ACTIVE_STAGE==='s0') return c.stage===0;
+    if(ACTIVE_STAGE==='s1') return c.stage===1;
+    if(ACTIVE_STAGE==='s2') return c.stage===2;
+    if(ACTIVE_STAGE==='stuck') return c.stuck;
+    return true;
+  });
+
+  if(q) list=list.filter(c=>
+    c.name.toLowerCase().includes(q)||
+    (c.email||'').toLowerCase().includes(q)||
+    (c.city||'').toLowerCase().includes(q)
+  );
+
+  if(sort==='signup_desc') list.sort((a,b)=>b.signup_ts-a.signup_ts);
+  else if(sort==='signup_asc') list.sort((a,b)=>a.signup_ts-b.signup_ts);
+  else if(sort==='name') list.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==='rx_desc') list.sort((a,b)=>b.total_rx-a.total_rx);
+  else if(sort==='stuck') list.sort((a,b)=>b.daysInStage-a.daysInStage);
+  else if(sort==='rx_this') list.sort((a,b)=>b.rxThis-a.rxThis);
+  else if(sort==='rx_last') list.sort((a,b)=>b.rxLast-a.rxLast);
+
+  FILTERED=list;
+  document.getElementById('tbl-ct').textContent=list.length+' clinics';
+  renderTable(list);
+}
+
+function renderTable(list){
+  const tb=document.getElementById('tbl-body');
+  if(!list.length){tb.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="e-ico">🔍</div><p>No results.</p></div></td></tr>`;return;}
+  tb.innerHTML=list.map(c=>`
+    <tr onclick="openPanel(${c.id})">
+      <td><div class="td-name">${c.name}</div><div class="td-sub">${c.city||''} · ${c.plan||''}</div></td>
+      <td>${stageBadge(c)}</td>
+      <td>${progDots(c)}</td>
+      <td class="td-mono">${fmtDate(c.signup_ts)}</td>
+      <td class="td-mono">${c.staff_ts?fmtDate(c.staff_ts):'<span style="color:var(--t3)">—</span>'}</td>
+      <td class="td-mono">${c.first_rx_ts?fmtDate(c.first_rx_ts):'<span style="color:var(--t3)">—</span>'}</td>
+      <td class="td-mono" style="color:var(--teal)">${c.rxThis||'<span style="color:var(--t3)">0</span>'}</td>
+      <td class="td-mono" style="color:var(--t2)">${c.rxLast||'<span style="color:var(--t3)">0</span>'}</td>
+      <td>${momBadge(c.rxThis,c.rxLast)}</td>
+      <td>${c.stuck?`<span style="color:var(--red);font-weight:700;font-size:12px">${c.daysInStage}d</span>`:'<span style="color:var(--t3)">—</span>'}</td>
+    </tr>`).join('');
+}
+
+function stageBadge(c){
+  if(c.stuck) return `<span class="badge b-red">⏳ Stuck</span>`;
+  if(c.stage===2) return `<span class="badge b-green">💊 Prescribing</span>`;
+  if(c.stage===1) return `<span class="badge b-amber">👥 Staff Added</span>`;
+  return `<span class="badge b-sky">✍ Signed Up</span>`;
+}
+function progDots(c){
+  const s1=c.stage>=1, s2=c.stage>=2;
+  return `<div class="pdots">
+    <div class="pd done"></div>
+    <div class="pl ${s1?'done':''}"></div><div class="pd ${s1?'done':''}"></div>
+    <div class="pl ${s2?'done':''}"></div><div class="pd ${s2?'done':''}"></div>
+  </div>`;
+}
+function momBadge(t,l){
+  if(!l&&!t) return '<span style="color:var(--t3)">—</span>';
+  if(!l) return `<span class="badge b-green">New</span>`;
+  const p=Math.round((t-l)/l*100);
+  if(p>0) return `<span class="badge b-green">+${p}%</span>`;
+  if(p<0) return `<span class="badge b-red">${p}%</span>`;
+  return `<span class="badge b-gray">0%</span>`;
+}
+
+// ═══════════════════════════════════════════════
+//  DETAIL PANEL
+// ═══════════════════════════════════════════════
+function openPanel(id){
+  ACTIVE_CLINIC=ALL.find(c=>c.id===id);
+  if(!ACTIVE_CLINIC)return;
+  const c=ACTIVE_CLINIC;
+  document.getElementById('ph-name').textContent=c.name;
+  document.getElementById('ph-sub').textContent=[c.city,c.plan+' Plan'].filter(Boolean).join(' · ');
+  PANEL_TAB='overview';
+  document.querySelectorAll('.pt').forEach((el,i)=>el.classList.toggle('on',i===0));
+  renderPanelBody();
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('panel').classList.add('on');
+}
+function closePanel(){
+  document.getElementById('overlay').classList.remove('on');
+  document.getElementById('panel').classList.remove('on');
+}
+function switchTab(tab,el){
+  PANEL_TAB=tab;
+  document.querySelectorAll('.pt').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on');
+  renderPanelBody();
+}
+
+function renderPanelBody(){
+  const c=ACTIVE_CLINIC;
+  const pb=document.getElementById('panel-body');
+  const rxThis=c.rxThis||0, rxLast=c.rxLast||0;
+
+  if(PANEL_TAB==='overview'){
+    pb.innerHTML=`
+      <div class="ps-grid">
+        <div class="ps"><div class="ps-l">Stage</div><div class="ps-v">${c.stage===2?'Active':c.stage===1?'Staff Set':'Signup'}</div></div>
+        <div class="ps"><div class="ps-l">Total Rx</div><div class="ps-v" style="color:var(--teal)">${c.total_rx||0}</div></div>
+        <div class="ps"><div class="ps-l">This Mo.</div><div class="ps-v" style="color:var(--green)">${rxThis}</div></div>
+        <div class="ps"><div class="ps-l">Last Mo.</div><div class="ps-v" style="color:var(--t2)">${rxLast}</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="section-label">Contact Info</div>
+      <div class="kv"><div class="k">Email</div><div class="v"><a href="mailto:${c.email}" style="color:var(--teal)">${c.email||'—'}</a></div></div>
+      <div class="kv"><div class="k">Phone</div><div class="v">${c.phone||'—'}</div></div>
+      <div class="kv"><div class="k">Location</div><div class="v">${c.city||'—'}</div></div>
+      <div class="kv"><div class="k">Plan</div><div class="v">${c.plan||'—'}</div></div>
+      <div class="kv"><div class="k">Staff Count</div><div class="v">${c.staff_count||0}</div></div>
+      <div class="divider"></div>
+      <div class="section-label">Pipeline Status</div>
+      ${stageBadge(c)}
+      ${c.stuck?`<div style="margin-top:8px;color:var(--red);font-size:12px">⚠️ Stuck for ${c.daysInStage} days — needs follow-up</div>`:''}`;
+
+  } else if(PANEL_TAB==='rx'){
+    // Monthly rx bar chart (last 6 months)
+    const months=[];
+    for(let m=5;m>=0;m--){
+      const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-m);
+      const start=d.getTime();
+      const end=m===0?NOW:new Date(d.getFullYear(),d.getMonth()+1,0).getTime();
+      const cnt=(c.rxRecords||[]).filter(r=>r.ts>=start&&r.ts<=end).length;
+      months.push({lbl:d.toLocaleString('default',{month:'short'}),cnt});
+    }
+    const maxCnt=Math.max(...months.map(m=>m.cnt),1);
+    pb.innerHTML=`
+      <div class="ps-grid">
+        <div class="ps"><div class="ps-l">This Month</div><div class="ps-v" style="color:var(--teal)">${rxThis}</div></div>
+        <div class="ps"><div class="ps-l">Last Month</div><div class="ps-v" style="color:var(--t2)">${rxLast}</div></div>
+        <div class="ps"><div class="ps-l">MoM</div><div class="ps-v">${momBadge(rxThis,rxLast)}</div></div>
+        <div class="ps"><div class="ps-l">Total</div><div class="ps-v">${c.total_rx||0}</div></div>
+      </div>
+      <div class="section-label" style="margin-top:12px">Rx Volume — Last 6 Months</div>
+      <div class="bar-wrap">
+        ${months.map(m=>`
+          <div class="bar-col">
+            <div class="bar-fill" style="height:${Math.round(m.cnt/maxCnt*90)}%;background:linear-gradient(180deg,var(--teal),var(--sky));min-height:${m.cnt?4:0}px" title="${m.cnt} Rx"></div>
+            <div class="bar-lbl">${m.lbl}</div>
+          </div>`).join('')}
+      </div>`;
+
+  } else if(PANEL_TAB==='drugs'){
+    // Drug frequency & pharmacy breakdown
+    const drugMap={}, pharMap={};
+    (c.rxRecords||[]).forEach(r=>{
+      drugMap[r.drug]=(drugMap[r.drug]||0)+1;
+      pharMap[r.pharmacy]=(pharMap[r.pharmacy]||0)+1;
+    });
+    const drugs=Object.entries(drugMap).sort((a,b)=>b[1]-a[1]);
+    const phars=Object.entries(pharMap).sort((a,b)=>b[1]-a[1]);
+    const total=c.total_rx||1;
+    pb.innerHTML=`
+      <div class="section-label">Top Drugs Prescribed</div>
+      ${drugs.length?drugs.slice(0,10).map(([d,n])=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--b1)">
+          <div style="flex:1;font-size:13px;font-weight:500">${d}</div>
+          <div style="width:80px;background:var(--b1);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;border-radius:3px;background:var(--teal);width:${Math.round(n/total*100)}%"></div></div>
+          <div class="td-mono" style="color:var(--teal);width:30px;text-align:right">${n}</div>
+        </div>`).join(''):'<div style="color:var(--t3);font-size:13px">No Rx data yet.</div>'}
+      <div class="divider"></div>
+      <div class="section-label">Pharmacies Used</div>
+      ${phars.length?phars.map(([p,n])=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--b1)">
+          <div style="flex:1;font-size:13px;font-weight:500">${p}</div>
+          <div style="width:80px;background:var(--b1);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;border-radius:3px;background:var(--purple);width:${Math.round(n/total*100)}%"></div></div>
+          <div class="td-mono" style="color:var(--purple);width:30px;text-align:right">${n}</div>
+        </div>`).join(''):'<div style="color:var(--t3);font-size:13px">No pharmacy data yet.</div>'}`;
+
+  } else if(PANEL_TAB==='timeline'){
+    pb.innerHTML=`
+      <div class="tl">
+        <div class="tl-row"><div class="tl-dot done"></div><div class="tl-title">Signed Up</div><div class="tl-meta">${c.signup_ts?fmtDateFull(c.signup_ts):'—'}</div></div>
+        <div class="tl-row"><div class="tl-dot ${c.staff_ts?'done':'wait'}"></div><div class="tl-title" style="${!c.staff_ts?'color:var(--t3)':''}">Staff Added</div><div class="tl-meta">${c.staff_ts?fmtDateFull(c.staff_ts):'Not yet'}</div></div>
+        <div class="tl-row"><div class="tl-dot ${c.first_rx_ts?'done':'wait'}"></div><div class="tl-title" style="${!c.first_rx_ts?'color:var(--t3)':''}">First Rx Sent</div><div class="tl-meta">${c.first_rx_ts?fmtDateFull(c.first_rx_ts):'Not yet'}</div></div>
+        ${c.total_rx>0?`<div class="tl-row"><div class="tl-dot done"></div><div class="tl-title">Active Prescriber</div><div class="tl-meta">${c.total_rx} total Rx · ${c.rxThis} this month</div></div>`:''}
+      </div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  AI CHAT
+// ═══════════════════════════════════════════════
+function toggleAI(){
+  AI_OPEN=!AI_OPEN;
+  document.getElementById('ai-box').classList.toggle('on',AI_OPEN);
+}
+function ask(q){ document.getElementById('ai-inp').value=q; sendAI(); }
+
+async function sendAI(){
+  const inp=document.getElementById('ai-inp');
+  const msg=inp.value.trim(); if(!msg)return;
+  inp.value='';
+  document.getElementById('ai-sugs').style.display='none';
+  addMsg(msg,'u');
+  AI_HIST.push({role:'user',content:msg});
+
+  const typing=addMsg('Thinking…','a typing');
+
+  try{
+    let reply='';
+    if(WORKER_URL){
+      const r=await fetch(WORKER_URL+'/ai',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:AI_HIST, context:buildContext()})
+      });
+      const d=await r.json();
+      reply=d.reply||'No response.';
+    } else {
+      reply=localAI(msg);
+    }
+    typing.remove();
+    addMsg(reply,'a');
+    AI_HIST.push({role:'assistant',content:reply});
+  }catch(e){
+    typing.remove();
+    addMsg('Error: '+e.message,'a');
+  }
+}
+
+function addMsg(text,cls){
+  const el=document.createElement('div');
+  el.className='ai-msg '+cls;
+  el.textContent=text;
+  const c=document.getElementById('ai-msgs');
+  c.appendChild(el);
+  c.scrollTop=c.scrollHeight;
+  return el;
+}
+
+function buildContext(){
+  const n=ALL.length;
+  const s0=ALL.filter(c=>c.stage===0).length;
+  const s1=ALL.filter(c=>c.stage===1).length;
+  const s2=ALL.filter(c=>c.stage===2).length;
+  const stuck=ALL.filter(c=>c.stuck).length;
+  const rxThis=ALL.reduce((s,c)=>s+c.rxThis,0);
+  const rxLast=ALL.reduce((s,c)=>s+c.rxLast,0);
+  const top5=ALL.filter(c=>c.stage===2).sort((a,b)=>b.rxThis-a.rxThis).slice(0,5).map(c=>`${c.name}: ${c.rxThis} Rx this month`).join(', ');
+  const stuckList=ALL.filter(c=>c.stuck).slice(0,5).map(c=>`${c.name} (${c.daysInStage}d stuck)`).join(', ');
+  return `VetHubRx Clinic Pipeline data as of ${new Date().toLocaleDateString()}:
+Total clinics: ${n}. Signed up only: ${s0}. Staff added: ${s1}. Prescribing: ${s2}. Stuck >7 days: ${stuck}.
+Rx this month (company): ${rxThis}. Rx last month: ${rxLast}. MoM change: ${rxLast?Math.round((rxThis-rxLast)/rxLast*100):0}%.
+Top prescribers this month: ${top5||'none'}.
+Stuck clinics: ${stuckList||'none'}.
+Activation rate (signup→Rx): ${n?Math.round(s2/n*100):0}%.`;
+}
+
+function localAI(msg){
+  const m=msg.toLowerCase();
+  const n=ALL.length, s2=ALL.filter(c=>c.stage===2).length, stuck=ALL.filter(c=>c.stuck).length;
+  const rxThis=ALL.reduce((s,c)=>s+c.rxThis,0), rxLast=ALL.reduce((s,c)=>s+c.rxLast,0);
+  if(m.includes('stuck')) return `${stuck} clinics are stuck (>7 days without moving to the next stage). Top stuck: ${ALL.filter(c=>c.stuck).slice(0,3).map(c=>c.name+' ('+c.daysInStage+'d)').join(', ')}.`;
+  if(m.includes('rx')||m.includes('prescription')) return `This month: ${rxThis} Rx company-wide. Last month: ${rxLast}. That's a ${rxLast?Math.round((rxThis-rxLast)/rxLast*100):0}% change MoM.`;
+  if(m.includes('top')) return `Top prescribers this month: ${ALL.filter(c=>c.stage===2).sort((a,b)=>b.rxThis-a.rxThis).slice(0,5).map(c=>c.name+': '+c.rxThis).join(', ')}.`;
+  if(m.includes('activation')||m.includes('convert')) return `Activation rate (signup → first Rx): ${n?Math.round(s2/n*100):0}%. ${s2} of ${n} clinics are prescribing.`;
+  if(m.includes('priority')||m.includes('today')) return `Priority follow-ups: ${ALL.filter(c=>c.stuck).sort((a,b)=>b.daysInStage-a.daysInStage).slice(0,5).map(c=>c.name+' (stuck '+c.daysInStage+'d)').join(', ')}.`;
+  return `Pipeline snapshot: ${n} total clinics · ${s2} prescribing · ${stuck} stuck · ${rxThis} Rx this month vs ${rxLast} last month.`;
+}
+
+// ═══════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════
+function exportCSV(){
+  const rows=[['Clinic','Email','City','Plan','Stage','Signed Up','Staff Added','First Rx','Rx This Mo','Rx Last Mo','Total Rx','Stuck']];
+  FILTERED.forEach(c=>rows.push([c.name,c.email||'',c.city||'',c.plan||'',c.stage===2?'Prescribing':c.stage===1?'Staff Added':'Signed Up',fmtDateFull(c.signup_ts),c.staff_ts?fmtDateFull(c.staff_ts):'',c.first_rx_ts?fmtDateFull(c.first_rx_ts):'',c.rxThis,c.rxLast,c.total_rx,c.stuck?c.daysInStage+'d':'']));
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='vhbrx-pipeline-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════
+function $(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+function fmtDate(ts){ if(!ts)return'—'; return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}); }
+function fmtDateFull(ts){ if(!ts)return'—'; return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closePanel(); });
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+loadData();
+</script>
+</body>
+</html>
